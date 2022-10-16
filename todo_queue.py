@@ -4,9 +4,12 @@ from NicePrinter import table
 
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 TASK_CATEGORY_ALIASES = {
-    "a": "Admin",
-    "c": "Cleaning",
-    "hw": "Homework",
+    "a": "admin",
+    "c": "cleaning",
+    "hw": "homework",
+    "s": "shopping",
+    "r": "routine",
+    "soc": "social",
 }
 
 class Task:
@@ -94,10 +97,18 @@ class TodoQueue:
         if task_to_remove := self.ids.get(local_id):
             return self.remove_task(task_to_remove)
 
+    def get_top_k(self, k = 5):
+        return self.output_table([task.get_basic_info() for task in self][:k])
+
+    def output_table(self, output_tasks):
+        output = [Task.get_readable_attribute_names()] + output_tasks
+        return table(output, centered=True) + "\n"
+    
+    def filter(self, filter_func):
+        return [task.get_basic_info() for task in self if filter_func(task)]
+
     def __str__(self):
-        output = [Task.get_readable_attribute_names()]
-        [output.append(task.get_basic_info()) for task in self]
-        return table(output, centered = True) + "\n"
+        return self.output_table(self.filter(lambda x: True))
 
     def __iter__(self):
         self.curr_node = self.head

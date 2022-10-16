@@ -3,7 +3,8 @@
 from unicodedata import category
 from todo_queue import Task, TodoQueue, TIME_FORMAT, TASK_CATEGORY_ALIASES
 import datetime
-from NicePrinter import title, bold, cbox, table
+from NicePrinter import title, bold, box, table
+import random
 import datetime
 import csv
 import os
@@ -32,9 +33,12 @@ class Main:
             "complete": (self.complete, "c", "Complete a task at the front of the queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
             "delete": (self.delete, "del", "Delete (not complete) a task given a local id.", ["[int]: Local id of task to delete"]),
             "drop": (self.drop, "d", "Drop front task to bottom of its priority in queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
-            "print": (lambda x: print(self.q), "p", "Print queue."),
+            "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
+            "random": (self.random_tasks, "r", "Selects random tasks from every priority."),
+            "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
             "done": (self.done, "done", "Save and show completed tasks."),
             "info": (lambda x: self.info(), "i", "Print available actions."),
+            "archive_completed": (self.archive, "ac", "Archive completed tasks."),
             "exit": (self.exit, "e", "Save queue and exit."),
             "clear": (lambda x: os.system('clear'), "clear", 'Clear terminal.'),
         }   
@@ -67,10 +71,47 @@ class Main:
             self.instructions[action][0](args)
             print()
 
+    def random_tasks(self, args):
+        tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5)]
+        print(self.q.output_table(tasks))
+
+    def print_tasks(self, args):
+        if args:
+            if len(args) == 1 and args[0].isnumeric():
+                print(self.q.get_top_k(int(args[0])))
+            else: 
+                print("Print takes one numeric argument and it must match the local id of an existing task.")
+                return
+        else:
+            print(self.q)
+
+    def category_filter(self, args):
+        if len(args) == 1:
+            tasks = self.q.filter(lambda task: task.category == args[0])
+            print(self.q.output_table(tasks))
+        else:
+            print("Category filter takes one argument.")
+
+
+    def archive(self, args):
+        self.log_file.close()
+        
+        current_dir = os.path.dirname(__file__)
+        archive_dir = os.path.join(current_dir, "archive")
+        if not os.path.exists(archive_dir):
+            os.mkdir(archive_dir)
+            print("Created archive directory,")
+        os.rename(self.log_filename, os.path.join(archive_dir, datetime.datetime.now().strftime('%Y%m%dT%H:%M:%S')) + "_"+ os.path.basename(self.log_filename))
+        
+        self.log_file = open(self.log_filename, 'w')
+        self.logger = csv.writer(self.log_file)
+        self.logger.writerow(Task.get_attribute_names() + ["time_completed"])
+        print("Old completed tasks archived and new task log set up.")
+
     def done(self, args):
         self.log_file.close()
         with open(self.log_filename, "r") as readfile:
-            print(table(list(csv.reader(readfile))))
+            print(table(list(csv.reader(readfile)), centered=True))
         self.log_file = open(self.log_filename, "a")
         self.logger = csv.writer(self.log_file)
 
@@ -94,7 +135,7 @@ class Main:
             else:
                 drop_task = self.q.pull_first()
         self.q.put(drop_task)
-        print(self.q)
+        print(self.q.get_top_k())
         print(f"Successfully dropped {drop_task.name} (id {drop_task.local_id}) at {datetime.datetime.now().strftime(TIME_FORMAT)}.")
 
     def complete(self, args):
@@ -111,7 +152,7 @@ class Main:
             else:
                 completed_task = self.q.pull_first()
         self.log(completed_task)
-        print(self.q)
+        print(self.q.get_top_k())
         print(f"Successfully completed {completed_task.name} (id {completed_task.local_id}) at {datetime.datetime.now().strftime(TIME_FORMAT)}.")
             
     def delete(self, args):
@@ -126,11 +167,7 @@ class Main:
     
     def add(self, args):
         if args:
-            if len(args) == 1:
-                name = args[0]
-            else: 
-                print("Add only takes one argument.")
-                return
+            name = " ".join(args)
         else:
             name = self.get_input(type = "non-empty text", out_text_override = "Task name\n")
         local_id = self.q.increment_counter()
@@ -141,15 +178,15 @@ class Main:
         category = self.get_input(type = "non-empty text", 
                                     out_text_override = f"Category {TASK_CATEGORY_ALIASES} or manual input\n", 
                                     input_conversion_override = lambda x: TASK_CATEGORY_ALIASES[x] if x in TASK_CATEGORY_ALIASES else x,
-                                    default_input="Misc")
+                                    default_input="misc")
         time_created = datetime.datetime.now()
         description = self.get_input(type = "text", 
                                     out_text_override = f"Description\n",)
         self.q.put(Task(local_id, name, priority, category, time_created, description))
-        print(self.q)
+        self.category_filter([category])
 
     def info(self):
-        print(cbox("Possible actions"))
+        print(box("Possible actions"))
         for i in self.instructions:
             details = self.instructions[i]
             print(bold(f"{i} ({details[1]})") + f" - {details[2]}")
@@ -205,8 +242,8 @@ class Main:
             for row in task_reader:
                 new_task = Task(
                     self.q.increment_counter(), 
-                    row[2], row[3], row[4], 
-                    datetime.datetime.strptime(row[1], TIME_FORMAT),
+                    row[1], int(row[3]), row[4], 
+                    datetime.datetime.strptime(row[2], TIME_FORMAT),
                     row[5],
                     datetime.datetime.strptime(row[6], TIME_FORMAT) if row[6] else None,
                 )
