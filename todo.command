@@ -78,7 +78,8 @@ class Main:
             print()
 
     def switch_mobile(self, args):
-        print(f"Mobile switched to {self.q.mobile := not self.q.mobile}")
+        self.q.mobile = not self.q.mobile
+        print(f"Mobile mode switched to {self.q.mobile}.")
 
     def random_tasks(self, args):
         tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5)]
