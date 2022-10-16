@@ -104,6 +104,7 @@ class TodoQueue:
     def output_table(self, output_tasks):
         output = [Task.get_readable_attribute_names()] + output_tasks
         if self.mobile:
+            output[0][0], output[0][3] = "Id", "P"
             output = [[row[i] for i in (0, 1, 3)] for row in output]
         return table(output, centered=True) + "\n"
     
