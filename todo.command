@@ -8,6 +8,7 @@ import random
 import datetime
 import csv
 import os
+import sys
 
 """
 Future instruction:
@@ -22,11 +23,13 @@ Future instruction:
 """
 
 class Main:
-    def __init__(self, task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
+    def __init__(self, mobile = "", task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
         dirname = os.path.dirname(__file__)
         self.task_filename = os.path.join(dirname, task_filename)
         self.log_filename = os.path.join(dirname,log_filename)
         self.q = TodoQueue()
+        if mobile == "1":
+            self.q.mobile = True
         
         self.instructions = {
             "add": (self.add, "a", "Add one task to the queue.",  ["[Optional[str]]: Name of task"]),
@@ -34,7 +37,7 @@ class Main:
             "delete": (self.delete, "del", "Delete (not complete) a task given a local id.", ["[int]: Local id of task to delete"]),
             "drop": (self.drop, "d", "Drop front task to bottom of its priority in queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
             "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
-            "mobile": (self.set_to_mobile, "stm", "Limit printing to id, name and priority for mobile interface"),
+            "switch_mobile": (self.switch_mobile, "sm", "Switch to and from mobile mode  which limits printing tasks to id, name and priority for mobile interface"),
             "random": (self.random_tasks, "r", "Selects random tasks from every priority."),
             "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
             "search_name": (self.search_name, "search", "Search by name substring", ["[str]: Substring to filter by"]),
@@ -74,9 +77,8 @@ class Main:
             self.instructions[action][0](args)
             print()
 
-    def set_to_mobile(self, args):
-        self.q.mobile = True
-        print("Set to mobile.")
+    def switch_mobile(self, args):
+        print(f"Mobile switched to {self.q.mobile := not self.q.mobile}")
 
     def random_tasks(self, args):
         tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5)]
@@ -298,4 +300,4 @@ class Main:
 
 if __name__ == "__main__":
     os.system('clear')
-    Main()
+    Main(*sys.argv[1:])
