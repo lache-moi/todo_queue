@@ -1,12 +1,12 @@
+#!/usr/bin/env python3.10
+
 from unicodedata import category
 from todo_queue import Task, TodoQueue, TIME_FORMAT, TASK_CATEGORY_ALIASES
 import datetime
-from NicePrinter import title, bold, box
-import time
+from NicePrinter import title, bold, cbox, table
 import datetime
 import csv
 import os
-import sys
 
 """
 Future instruction:
@@ -21,16 +21,19 @@ Future instruction:
 """
 
 class Main:
-    def __init__(self, task_filename = "todo_queue.csv", log_filename = "completed_tasks.csv"):
-        self.task_filename = task_filename
-        self.log_filename = log_filename
+    def __init__(self, task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
+        dirname = os.path.dirname(__file__)
+        self.task_filename = os.path.join(dirname, task_filename)
+        self.log_filename = os.path.join(dirname,log_filename)
         self.q = TodoQueue()
         
         self.instructions = {
             "add": (self.add, "a", "Add one task to the queue.",  ["[Optional[str]]: Name of task"]),
             "complete": (self.complete, "c", "Complete a task at the front of the queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
-            "delete": (self.delete, "del", "Delete (not complete) a task given a local id", ["[int]: Local id of task to delete"]),
+            "delete": (self.delete, "del", "Delete (not complete) a task given a local id.", ["[int]: Local id of task to delete"]),
+            "drop": (self.drop, "d", "Drop front task to bottom of its priority in queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
             "print": (lambda x: print(self.q), "p", "Print queue."),
+            "done": (self.done, "done", "Save and show completed tasks."),
             "info": (lambda x: self.info(), "i", "Print available actions."),
             "exit": (self.exit, "e", "Save queue and exit."),
             "clear": (lambda x: os.system('clear'), "clear", 'Clear terminal.'),
@@ -64,10 +67,35 @@ class Main:
             self.instructions[action][0](args)
             print()
 
+    def done(self, args):
+        self.log_file.close()
+        with open(self.log_filename, "r") as readfile:
+            print(table(list(csv.reader(readfile))))
+        self.log_file = open(self.log_filename, "a")
+        self.logger = csv.writer(self.log_file)
+
+
     def exit(self, args):
         self.save()
         print("Successfully exit, have a swell day and go do drugs.")
         exit()
+    
+    def drop(self, args):
+        if args:
+            if len(args) == 1 and args[0].isnumeric() and int(args[0]) in self.q.ids:
+                drop_task = self.q.pull_given_id(int(args[0]))
+            else:
+                print("Drop takes one numeric argument and it must match the local id of an existing task.")
+                return
+        else:
+            if self.q.empty():
+                print("There are no tasks to drop.")
+                return
+            else:
+                drop_task = self.q.pull_first()
+        self.q.put(drop_task)
+        print(self.q)
+        print(f"Successfully dropped {drop_task.name} (id {drop_task.local_id}) at {datetime.datetime.now().strftime(TIME_FORMAT)}.")
 
     def complete(self, args):
         if args:
@@ -121,7 +149,7 @@ class Main:
         print(self.q)
 
     def info(self):
-        print(box("Possible actions"))
+        print(cbox("Possible actions"))
         for i in self.instructions:
             details = self.instructions[i]
             print(bold(f"{i} ({details[1]})") + f" - {details[2]}")
@@ -213,4 +241,5 @@ class Main:
         return input_conversion(inp)
 
 if __name__ == "__main__":
+    os.system('clear')
     Main()

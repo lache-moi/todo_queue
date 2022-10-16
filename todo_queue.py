@@ -31,9 +31,6 @@ class Task:
             info[attr] = str(info[attr]) if info[attr] else ""
 
         return list(info.values())
-
-    def sort_priority(self):
-        return str(self.priority) + datetime.datetime.now().strftime(TIME_FORMAT)
          
     def __str__(self):
         return json.dumps(self.get_properties())
@@ -41,8 +38,8 @@ class Task:
     def get_properties(self):
         return {
             "local_id": self.local_id,
-            "time_created": self.time_created.strftime(TIME_FORMAT),
             "name": self.name,
+            "time_created": self.time_created.strftime(TIME_FORMAT),
             "priority": self.priority,
             "category": self.category,
             "description": self.description,
@@ -51,7 +48,7 @@ class Task:
 
     @staticmethod
     def get_readable_attribute_names():
-        return ["Local Id", "Time Created", "Name", "Priority", "Category", "Description", "Set Urgent"]
+        return ["Local Id", "Name", "Time Created", "Priority", "Category", "Description", "Set Urgent"]
     @staticmethod
     def get_attribute_names():
         return [attribute.lower().replace(" ", "_") for attribute in Task.get_readable_attribute_names()]
@@ -85,7 +82,7 @@ class TodoQueue:
     def put(self, new_task):
         self.ids[new_task.local_id] = new_task
         for node in self:
-            if new_task.sort_priority() < node.sort_priority():
+            if new_task.priority < node.priority:
                 return self.insert_task_before(node, new_task)
         return self.insert_task_before(self.tail, new_task)
 
