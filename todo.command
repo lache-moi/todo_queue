@@ -36,6 +36,8 @@ class Main:
             "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
             "random": (self.random_tasks, "r", "Selects random tasks from every priority."),
             "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
+            "search_name": (self.search_name, "search", "Search by name substring", ["[str]: Substring to filter by"]),
+            "priority_filter": (self.priority_filter, "pfilter", "Filter by priority.", ["[int]: Priority to filter by"]),
             "done": (self.done, "done", "Save and show completed tasks."),
             "info": (lambda x: self.info(), "i", "Print available actions."),
             "archive_completed": (self.archive, "ac", "Archive completed tasks."),
@@ -84,6 +86,20 @@ class Main:
                 return
         else:
             print(self.q)
+
+    def priority_filter(self, args):
+        if len(args) == 1 and args[0].isnumeric(0):
+            tasks = self.q.filter(lambda task: task.priority == int(args[0]))
+            print(self.q.output_table(tasks))
+        else:
+            print("Priority filter takes one numeric argument.")   
+
+    def search_name(self, args):
+        if len(args) == 1:
+            tasks = self.q.filter(lambda task: args[0] in task.name)
+            print(self.q.output_table(tasks))
+        else:
+            print("Search name takes one argument.")
 
     def category_filter(self, args):
         if len(args) == 1:
@@ -191,9 +207,7 @@ class Main:
             details = self.instructions[i]
             print(bold(f"{i} ({details[1]})") + f" - {details[2]}")
             if len(details) > 3:
-                [print("   " + arg) for arg in details[3]]
-            print()
-        
+                [print("   " + arg) for arg in details[3]]        
 
 
     def start(self):
