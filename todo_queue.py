@@ -63,6 +63,7 @@ class TodoQueue:
         self.head = Task(None, None, None, None, None, None)
         self.tail = Task(None, None, None, None, None, None)
         self.head.next, self.tail.prev = self.tail, self.head
+        self.mobile = False
 
     def increment_counter(self):
         self.local_id_counter += 1
@@ -102,6 +103,8 @@ class TodoQueue:
 
     def output_table(self, output_tasks):
         output = [Task.get_readable_attribute_names()] + output_tasks
+        if self.mobile:
+            output = [[row[i] for i in (0, 1, 3)] for row in output]
         return table(output, centered=True) + "\n"
     
     def filter(self, filter_func):

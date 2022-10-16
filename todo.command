@@ -34,6 +34,7 @@ class Main:
             "delete": (self.delete, "del", "Delete (not complete) a task given a local id.", ["[int]: Local id of task to delete"]),
             "drop": (self.drop, "d", "Drop front task to bottom of its priority in queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
             "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
+            "mobile": (self.set_to_mobile, "stm", "Limit printing to id, name and priority for mobile interface"),
             "random": (self.random_tasks, "r", "Selects random tasks from every priority."),
             "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
             "search_name": (self.search_name, "search", "Search by name substring", ["[str]: Substring to filter by"]),
@@ -72,6 +73,10 @@ class Main:
                                 input_conversion_override = lambda x: parse_instructions(x))
             self.instructions[action][0](args)
             print()
+
+    def set_to_mobile(self, args):
+        self.q.mobile = True
+        print("Set to mobile.")
 
     def random_tasks(self, args):
         tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5)]
