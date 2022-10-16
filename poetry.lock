@@ -1,0 +1,15 @@
+[[package]]
+name = "niceprinter"
+version = "1.0.3"
+description = "A simple Python project to generate nice prints"
+category = "main"
+optional = false
+python-versions = "*"
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.8"
+content-hash = "7a62a22d1e18930475181eba8d970b8b5d3a00c1f9e66dd8ebf99088002a4f23"
+
+[metadata.files]
+niceprinter = []
