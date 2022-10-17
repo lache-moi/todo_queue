@@ -23,13 +23,13 @@ Future instruction:
 """
 
 class Main:
-    def __init__(self, mobile = "", task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
+    def __init__(self, mobile = False, auto_start = True, task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
         dirname = os.path.dirname(__file__)
         self.task_filename = os.path.join(dirname, task_filename)
         self.log_filename = os.path.join(dirname,log_filename)
         self.q = TodoQueue()
-        if mobile == "1":
-            self.q.mobile = True
+        self.q.mobile = mobile
+        self.auto_start = auto_start
         
         self.instructions = {
             "add": (self.add, "a", "Add one task to the queue.",  ["[Optional[str]]: Name of task"]),
@@ -96,7 +96,7 @@ class Main:
             print(self.q)
 
     def priority_filter(self, args):
-        if len(args) == 1 and args[0].isnumeric(0):
+        if len(args) == 1 and args[0].isnumeric():
             tasks = self.q.filter(lambda task: task.priority == int(args[0]))
             print(self.q.output_table(tasks))
         else:
@@ -221,25 +221,28 @@ class Main:
     def start(self):
         print(title("Welcome to your To-Do Queue", 90, '='))
         print(f"To get started, would you like to use '{self.task_filename}' to retrieve and store existing tasks?")
-        if self.get_input(default_input="y"):
-            if os.path.exists(self.task_filename):
-                self.load()
-                print("Successfully loaded from file.")
-            else:
-                print(f"File doesn't exist. New file '{self.task_filename}' will be created after exiting.")
+
+        if not self.auto_start:
+            if not self.get_input(default_input="y"):
+                print("Set new filename.")
+                self.task_filename = self.get_input(type="non-empty text")
+
+        if os.path.exists(self.task_filename):
+            self.load()
+            print("Successfully loaded from file.")
         else:
-            print("Set new filename.")
-            self.task_filename = self.get_input(type="non-empty text")
-            # Check if file exists and set overload
+            print(f"File doesn't exist. New file '{self.task_filename}' will be created after exiting.")
         print("Task file setup complete.\n")
 
         print(f"Would you like to use '{self.log_filename}' to store completed tasks?")
-        if not self.get_input(default_input="y"):
-            self.log_filename = self.get_input(type="non-empty text")
+        if not self.auto_start:
+            if not self.get_input(default_input="y"):
+                self.log_filename = self.get_input(type="non-empty text")
         
         log_file_existed = os.path.exists(self.log_filename)
         self.log_file = open(self.log_filename, 'a')
         self.logger = csv.writer(self.log_file)
+
         if not log_file_existed:
             self.logger.writerow(Task.get_attribute_names() + ["time_completed"])
             print("New logging file created. ", end="")
@@ -301,4 +304,19 @@ class Main:
 
 if __name__ == "__main__":
     os.system('clear')
-    Main(*sys.argv[1:])
+    def check_sys_args(args):
+        if len(args) == 1:
+            return True, False, True
+        elif len(args) == 2 and args[1] in ['0', '1']:
+            return True, args[1] == '1', True
+        elif len(args) == 3 and args[1] in ['0', '1'] and args[2] in ['0', '1']:
+            return True, args[1] == '1', args[1] == '1'
+        else:
+            return False, False, True
+    
+    valid, mobile, auto_start = check_sys_args(sys.argv)
+
+    if valid:
+        Main(mobile = mobile, auto_start = auto_start)
+    else:
+        print("Invalid Arguments")
