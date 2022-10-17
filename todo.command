@@ -75,6 +75,7 @@ class Main:
                                 input_test_override = lambda x:x and x.split()[0] in valid_inputs,
                                 input_conversion_override = lambda x: parse_instructions(x))
             self.instructions[action][0](args)
+            self.save()
             print()
 
     def switch_mobile(self, args):
@@ -82,7 +83,7 @@ class Main:
         print(f"Mobile mode switched to {self.q.mobile}.")
 
     def random_tasks(self, args):
-        tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5)]
+        tasks = [random.choice(self.q.filter(lambda task: task.priority == i)) for i in range(5) if self.q.filter(lambda task: task.priority == i)]
         print(self.q.output_table(tasks))
 
     def print_tasks(self, args):
@@ -142,6 +143,7 @@ class Main:
 
     def exit(self, args):
         self.save()
+        self.log_file.close()
         print("Successfully exit, have a swell day and go do drugs.")
         exit()
     
@@ -255,6 +257,8 @@ class Main:
             for task in self.q:
                 task_writer.writerow(task.get_properties().values())
         self.log_file.close()
+        self.log_file = open(self.log_filename, 'a')
+        self.logger = csv.writer(self.log_file)
         
     def log(self, task):
         self.logger.writerow(list(task.get_properties().values()) + [datetime.datetime.now().strftime(TIME_FORMAT)])
