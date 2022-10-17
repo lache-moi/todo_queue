@@ -72,7 +72,7 @@ class Main:
         while True:
             action, args = self.get_input(type = "non-empty text", 
                                 out_text_override = "",
-                                input_test_override = lambda x: x.split()[0] in valid_inputs,
+                                input_test_override = lambda x:x and x.split()[0] in valid_inputs,
                                 input_conversion_override = lambda x: parse_instructions(x))
             self.instructions[action][0](args)
             print()
