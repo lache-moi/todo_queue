@@ -8,3 +8,8 @@ local_id,name,time_created,priority,category,description,set_urgent,time_complet
 11,respond to shipping,2022-10-16 21:34:34,2,admin,pltr,,2022-10-18 03:23:56
 20,clean living room,2022-10-17 17:21:21,2,cleaning,,,2022-10-18 03:57:33
 4,clean kitchen surface,2022-10-16 22:26:18,1,cleaning,,,2022-10-18 05:36:28
+7,mark absences,2022-10-16 22:40:59,1,admin,unix,,2022-10-18 05:41:19
+6,submit timesheet,2022-10-16 22:39:26,1,admin,unix,,2022-10-18 05:46:01
+19,clean bathroom,2022-10-17 17:20:51,2,cleaning,,,2022-10-18 05:47:49
+1,check-in to flight,2022-10-18 01:57:59,0,holiday,,,2022-10-18 12:04:53
+42,print boarding cards,2022-10-18 12:19:31,0,holiday,,,2022-10-18 14:17:48
