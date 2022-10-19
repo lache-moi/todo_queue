@@ -13,3 +13,6 @@ local_id,name,time_created,priority,category,description,set_urgent,time_complet
 19,clean bathroom,2022-10-17 17:20:51,2,cleaning,,,2022-10-18 05:47:49
 1,check-in to flight,2022-10-18 01:57:59,0,holiday,,,2022-10-18 12:04:53
 42,print boarding cards,2022-10-18 12:19:31,0,holiday,,,2022-10-18 14:17:48
+1,travel antiperspirant,2022-10-18 11:04:02,0,shopping,,,2022-10-18 11:41:37
+2,pack for sicily,2022-10-16 21:23:13,1,holiday,,,2022-10-18 12:17:15
+4,laundry,2022-10-16 22:31:26,1,cleaning,,,2022-10-18 12:17:24
