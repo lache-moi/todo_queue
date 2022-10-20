@@ -1,5 +1,6 @@
 import json
 import datetime
+from unicodedata import category
 from NicePrinter import table
 
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -11,25 +12,77 @@ TASK_CATEGORY_ALIASES = {
     "r": "routine",
     "soc": "social",
 }
+DAYS_TO_ESCALATE = {
+    1: 1,
+    2: 6,
+    3: 21,
+    4: 90,
+}
 
 class Task:
-    def __init__(self, local_id: int, name: str, priority: int, category: str, time_created: datetime.datetime, description: str = None, set_urgent: datetime.datetime = None):
+    
+    def __init__(self, local_id: int, name: str, priority: int, category: str, time_created: datetime.datetime, description: str = None, escalate_time: datetime.datetime = None):
         self.local_id = local_id
         self.time_created = time_created
         self.name = name
         self.priority = priority
         self.category = category
         self.description = description
-        self.set_urgent = set_urgent
+        self.escalate_time = escalate_time if escalate_time else self.calc_escalate_time(datetime.datetime.now())
+        self.check_escalate()
         self.prev = None
         self.next = None
+
+    def set_name(self, new_name):
+        self.name = new_name
+
+    def set_category(self, new_category):
+        self.category = new_category
+
+    def set_description(self, new_description):
+        self.description = new_description
+
+
+    def calc_escalate_time(self, from_time: datetime.datetime) -> datetime.datetime:
+        
+        if self.priority == 0:
+            return None
+        
+        more_days = datetime.timedelta(days = DAYS_TO_ESCALATE[self.priority])
+        return datetime.datetime(from_time.year, from_time.month, from_time.day) + more_days
+
+    def escalate(self, force = False):
+
+        if self.priority == 0:
+            return None
+        
+        self.priority -= 1
+        self.escalate_time = self.calc_escalate_time(datetime.datetime.now() if force else self.escalate_time)
+        return self
+
+    def deescalate(self):
+        if self.priority == 4:
+            return None
+        
+        self.priority += 1
+        self.escalate_time = self.calc_escalate_time(datetime.datetime.now())
+        return self
+
+    def check_escalate(self):
+        while self.escalate_time and datetime.datetime.now() > self.escalate_time:
+            self.escalate()
 
     def update_priority(self, new_priority: int):
         self.priority = new_priority
 
+    def calc_days_til_escalate(self):
+        if self.escalate_time:
+            return (self.escalate_time - datetime.datetime.now()).days + 1
+
     def get_basic_info(self):
         info = self.get_properties()
         info["priority"] = f"P{info['priority']}"
+        info["escalate_time"] = f"{self.calc_days_til_escalate()} days" if self.escalate_time else None
         for attr in info:
             info[attr] = str(info[attr]) if info[attr] else ""
 
@@ -42,26 +95,30 @@ class Task:
         return {
             "local_id": self.local_id,
             "name": self.name,
-            "time_created": self.time_created.strftime(TIME_FORMAT),
+            "time_created": self.time_created,
             "priority": self.priority,
             "category": self.category,
             "description": self.description,
-            "set_urgent": self.set_urgent.strftime(TIME_FORMAT) if self.set_urgent else None,
+            "escalate_time": self.escalate_time
         }
 
     @staticmethod
     def get_readable_attribute_names():
-        return ["Local Id", "Name", "Time Created", "Priority", "Category", "Description", "Set Urgent"]
+        return ["Local Id", "Name", "Time Created", "Priority", "Category", "Description", "Escalate Time"]
     @staticmethod
     def get_attribute_names():
         return [attribute.lower().replace(" ", "_") for attribute in Task.get_readable_attribute_names()]
+
+class EmptyNode:
+    def __init__(self):
+        self.next = None
+        self.prev = None
 
 class TodoQueue:
     def __init__(self, infile: str = None):
         self.local_id_counter = 0
         self.ids = {}
-        self.head = Task(None, None, None, None, None, None)
-        self.tail = Task(None, None, None, None, None, None)
+        self.head, self.tail = EmptyNode(), EmptyNode()
         self.head.next, self.tail.prev = self.tail, self.head
         self.mobile = False
 
@@ -94,9 +151,12 @@ class TodoQueue:
         if not self.empty():
             return self.remove_task(self.head.next)
     
-    def pull_given_id(self, local_id):
+    def pull_given_id(self, local_id) -> Task:
         if task_to_remove := self.ids.get(local_id):
             return self.remove_task(task_to_remove)
+    
+    def get_given_id(self, local_id) -> Task:
+        return self.ids.get(local_id)
 
     def get_top_k(self, k = 5):
         return self.output_table([task.get_basic_info() for task in self][:k])
@@ -108,7 +168,7 @@ class TodoQueue:
             output = [[row[i] for i in (0, 1, 3)] for row in output]
         return table(output, centered=True) + "\n"
     
-    def filter(self, filter_func):
+    def filter(self, filter_func, k = None):
         return [task.get_basic_info() for task in self if filter_func(task)]
 
     def __str__(self):
@@ -120,7 +180,7 @@ class TodoQueue:
     
     def __next__(self):
         curr_task = self.curr_node.next
-        if curr_task.name:
+        if isinstance(curr_task, Task):
             self.curr_node = self.curr_node.next
             return curr_task
         raise StopIteration

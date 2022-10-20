@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.10
 
+from ast import parse
+from tabnanny import check
 from unicodedata import category
 from todo_queue import Task, TodoQueue, TIME_FORMAT, TASK_CATEGORY_ALIASES
 import datetime
@@ -12,11 +14,7 @@ import sys
 
 """
 Future instruction:
-    - change priority, cp
     - rename: rn
-    - suggest random task for boredom
-    - search by category: sbc
-    - archive completed tasks:
     - undo (advanced)
     - retrieve from completed tasks
         - add ids to completed tasks
@@ -32,21 +30,37 @@ class Main:
         self.auto_start = auto_start
         
         self.instructions = {
+            # Basic
             "add": (self.add, "a", "Add one task to the queue.",  ["[Optional[str]]: Name of task"]),
             "complete": (self.complete, "c", "Complete a task at the front of the queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
             "delete": (self.delete, "del", "Delete (not complete) a task given a local id.", ["[int]: Local id of task to delete"]),
+
+            # Priority change
             "drop": (self.drop, "d", "Drop front task to bottom of its priority in queue.", ["[Optional[int]]: Local id of task if not front of queue"]),
+            "escalate": (self.escalate, "esc", "Escalates given task to next priority", ["[int]: Local id of task to escalate"]), 
+            "deesclate": (self.deescalate, "desc", "De-escalates given task to previous priority", ["[int]: Local id of task to de-escalate"]),
+
+            # Attribut change
+            "change_name": (self.change_name, "cn", "Change name of given task.", ["[int]: Local id of task of which to change name", "[str]: Name to which to change"]),
+            "change_category": (self.change_category, "cc", "Change category of given task.", ["[int]: Local id of task of which to change category", "[str]: Category to which to change"]),
+            "change_description": (self.change_description, "cd", "Change description of given task.", ["[int]: Local id of task of which to change description", "[str]: Description to which to change"]),
+
+            # Display
             "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
-            "switch_mobile": (self.switch_mobile, "sm", "Switch to and from mobile mode  which limits printing tasks to id, name and priority for mobile interface"),
             "random": (self.random_tasks, "r", "Selects random tasks from every priority."),
-            "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
             "search_name": (self.search_name, "search", "Search by name substring", ["[str]: Substring to filter by"]),
+            "category_filter": (self.category_filter, "filter", "Filter by category.", ["[str]: Category to filter by"]),
             "priority_filter": (self.priority_filter, "pfilter", "Filter by priority.", ["[int]: Priority to filter by"]),
+            "switch_mobile": (self.switch_mobile, "sm", "Switch to and from mobile mode  which limits printing tasks to id, name and priority for mobile interface"),
+
+            # Completed tasks
             "done": (self.done, "done", "Save and show completed tasks."),
-            "info": (lambda x: self.info(), "i", "Print available actions."),
             "archive_completed": (self.archive, "ac", "Archive completed tasks."),
-            "exit": (self.exit, "e", "Save queue and exit."),
+
+            # Miscellaneous
+            "info": (lambda x: self.info(), "i", "Print available actions."),
             "clear": (lambda x: os.system('clear'), "clear", 'Clear terminal.'),
+            "exit": (self.exit, "e", "Save queue and exit."),
         }   
         
         self.start()
@@ -57,7 +71,8 @@ class Main:
         os.system('clear')
         print(title("Let's get shit done!"))
         print(self.q)
-        self.info()
+        self.simple_info()
+        print()
 
         aliases = {self.instructions[i][1]:i for i in self.instructions}
 
@@ -77,6 +92,61 @@ class Main:
             self.instructions[action][0](args)
             self.save()
             print()
+
+    def change_name(self, args):
+        if not (len(args) >= 2 and args[0].isnumeric() and int(args[0]) in self.q.ids):
+            print("Change name takes multiple arguments and the first numeric argument must match the local id of an existing task.")
+            return
+        change_task = self.q.get_given_id(int(args[0]))
+        previous_name = change_task.name
+        change_task.set_name(" ".join(args[1:]))
+        print(f"Name of '{previous_name}' ({change_task.local_id}) set to '{change_task.name}'")
+
+    def change_category(self, args):
+        if not (len(args) == 2 and args[0].isnumeric() and int(args[0]) in self.q.ids):
+            print("Change category takes two arguments and the first numeric argument must match the local id of an existing task.")
+            return
+        change_task = self.q.get_given_id(int(args[0]))
+        previous_category = change_task.category
+        change_task.set_category(args[1])
+        print(f"Category of '{change_task.name}' ({change_task.local_id}) set from {previous_category} to {change_task.category}")
+
+    def change_description(self, args):
+        if not (len(args) >= 2 and args[0].isnumeric() and int(args[0]) in self.q.ids):
+            print("Change description takes two multiple arguments and the first numeric argument must match the local id of an existing task.")
+            return
+
+        change_task = self.q.get_given_id(int(args[0]))
+        change_task.set_description(" ".join(args[1:]))
+        print(f"Description of '{change_task.name}' ({change_task.local_id}) set to '{change_task.description}'")
+    
+    def escalate(self, args):
+
+        if not (len(args) == 1 and args[0].isnumeric() and int(args[0]) in self.q.ids):
+            print("Escalate takes one numeric argument and it must match the local id of an existing task.")
+            return
+
+        escalate_task = self.q.pull_given_id(int(args[0]))
+        print(f"'{escalate_task.name}' (id {escalate_task.local_id}) is P{escalate_task.priority} prior to escalation.")   
+        escalate_task.escalate(force = True)
+        self.q.put(escalate_task)
+        tasks  = self.q.filter(lambda task: task.category == escalate_task.category)
+        print(self.q.output_table(tasks))
+        print(f"Task successfully escalated. It is now P{escalate_task.priority} and has escalate time of {escalate_task.calc_days_til_escalate()}")   
+
+
+    def deescalate(self, args):
+        if not (len(args) == 1 and args[0].isnumeric() and int(args[0]) in self.q.ids):
+            print("Deescalate takes one numeric argument and it must match the local id of an existing task.")
+            return
+
+        deescalate_task = self.q.pull_given_id(int(args[0]))
+        print(f"'{deescalate_task.name}' (id {deescalate_task.local_id}) is P{deescalate_task.priority} prior to de-escalation.")     
+        deescalate_task.deescalate()
+        self.q.put(deescalate_task)
+        tasks  = self.q.filter(lambda task: task.category == deescalate_task.category)
+        print(self.q.output_table(tasks))
+        print(f"Task successfully deescalated. It is now P{deescalate_task.priority} and has escalate time of {deescalate_task.calc_days_til_escalate()}")   
 
     def switch_mobile(self, args):
         self.q.mobile = not self.q.mobile
@@ -188,8 +258,6 @@ class Main:
             print("Delete takes one numeric agument and it must match the local id of an existing task.")
             return
         print(f"Successfully deleted {deleted_task.name} (id {deleted_task.local_id}) at {datetime.datetime.now().strftime(TIME_FORMAT)}.")
-
-            
     
     def add(self, args):
         if args:
@@ -218,7 +286,16 @@ class Main:
             print(bold(f"{i} ({details[1]})") + f" - {details[2]}")
             if len(details) > 3:
                 [print("   " + arg) for arg in details[3]]        
-
+    
+    def simple_info(self):
+        simple_actions  = ["add", "complete", "delete", "print", "info", "exit"]
+        print(box("Possible actions"))
+        simple_instructions = {key:value for (key,value) in self.instructions.items() if key in simple_actions}
+        for i in simple_instructions:
+            details = self.instructions[i]
+            print(bold(f"{i} ({details[1]})") + f" - {details[2]}")
+            if len(details) > 3:
+                [print("   " + arg) for arg in details[3]]       
 
     def start(self):
         print(title("Welcome to your To-Do Queue", 90, '='))
@@ -280,7 +357,6 @@ class Main:
 
     def get_input(self, type = "yes-no", default_input = None, invalid_input_text = "Invalid input, please try again.",
                     out_text_override = None, input_test_override = None, input_conversion_override = None):
-        # overrides for input test and input conversion
 
         input_types =\
         {
@@ -308,19 +384,31 @@ class Main:
 
 if __name__ == "__main__":
     os.system('clear')
-    def check_sys_args(args):
-        if len(args) == 1:
-            return True, False, True
-        elif len(args) == 2 and args[1] in ['0', '1']:
-            return True, args[1] == '1', True
-        elif len(args) == 3 and args[1] in ['0', '1'] and args[2] in ['0', '1']:
-            return True, args[1] == '1', args[1] == '1'
-        else:
-            return False, False, True
-    
-    valid, mobile, auto_start = check_sys_args(sys.argv)
 
-    if valid:
-        Main(mobile = mobile, auto_start = auto_start)
+    def check_sys_args(args):
+        parsed_args = []
+
+        if not (1 <= len(args) <= 5):
+            return
+
+        if len(args) >= 2:
+            if args[1] not in ['0', '1']:
+                return
+            parsed_args.append(args[1] == '1')
+
+        if len(args) >= 3:
+            if args[2] not in ['0', '1']:
+                return
+            parsed_args.append(args[2] == '1')
+            parsed_args.extend(args[3:])
+
+        return parsed_args
+
+    
+    parsed_args = check_sys_args(sys.argv)
+    print(parsed_args)
+
+    if parsed_args != None:
+        Main(*parsed_args)
     else:
         print("Invalid Arguments")
