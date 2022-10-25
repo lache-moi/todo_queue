@@ -1,0 +1,25 @@
+local_id,name,time_created,priority,category,description,set_urgent,time_completed
+2,respond to messages,2022-10-16 21:24:15,1,misc,,,2022-10-16 23:26:37
+14,get tested,2022-10-17 06:01:37,1,misc,,,2022-10-17 10:02:18
+1,e3 visa - upload docs,2022-10-16 21:25:31,0,admin,,,2022-10-17 16:55:11
+4,put away clothes,2022-10-16 22:25:12,1,cleaning,,,2022-10-17 17:15:57
+9,email meyers,2022-10-16 22:43:38,1,homework,re: meeting over break,,2022-10-17 17:39:57
+19,tidy bedroom,2022-10-17 17:00:52,2,cleaning,,,2022-10-18 02:50:25
+11,respond to shipping,2022-10-16 21:34:34,2,admin,pltr,,2022-10-18 03:23:56
+20,clean living room,2022-10-17 17:21:21,2,cleaning,,,2022-10-18 03:57:33
+4,clean kitchen surface,2022-10-16 22:26:18,1,cleaning,,,2022-10-18 05:36:28
+7,mark absences,2022-10-16 22:40:59,1,admin,unix,,2022-10-18 05:41:19
+6,submit timesheet,2022-10-16 22:39:26,1,admin,unix,,2022-10-18 05:46:01
+19,clean bathroom,2022-10-17 17:20:51,2,cleaning,,,2022-10-18 05:47:49
+1,check-in to flight,2022-10-18 01:57:59,0,holiday,,,2022-10-18 12:04:53
+42,print boarding cards,2022-10-18 12:19:31,0,holiday,,,2022-10-18 14:17:48
+1,travel antiperspirant,2022-10-18 11:04:02,0,shopping,,,2022-10-18 11:41:37
+2,pack for sicily,2022-10-16 21:23:13,1,holiday,,,2022-10-18 12:17:15
+4,laundry,2022-10-16 22:31:26,1,cleaning,,,2022-10-18 12:17:24
+14,set urgent feature,2022-10-18 12:10:00,2,code,num days to set p0,2022-10-26 00:00:00,2022-10-20 10:04:28
+3,plan sicily,2022-10-16 21:36:49,1,holiday,,2022-10-21 00:00:00,2022-10-23 11:45:19
+9,refer anas,2022-10-16 23:20:49,2,admin,,2022-10-26 00:00:00,2022-10-23 23:06:12
+38,check-in wizz,2022-10-23 23:07:05,1,admin,,2022-10-24 00:00:00,2022-10-25 10:02:48
+8,notify class absence,2022-10-16 22:41:53,2,holiday,,2022-10-26 00:00:00,2022-10-25 10:03:04
+10,check-in cta->auh,2022-10-18 12:08:30,2,holiday,,2022-10-26 00:00:00,2022-10-25 13:16:24
+12,set custom escalate time,2022-10-20 10:07:47,2,code,todo.command,2022-10-26 00:00:00,2022-10-25 14:14:33

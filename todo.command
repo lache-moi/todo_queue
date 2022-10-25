@@ -1,9 +1,6 @@
 #!/usr/bin/env python3.10
 
-from ast import parse
-from tabnanny import check
-from unicodedata import category
-from todo_queue import Task, TodoQueue, TIME_FORMAT, TASK_CATEGORY_ALIASES
+from todo_queue import Task, TodoQueue, TIME_FORMAT, TASK_CATEGORY_ALIASES, DAYS_TO_ESCALATE
 import datetime
 from NicePrinter import title, bold, box, table
 import random
@@ -14,7 +11,6 @@ import sys
 
 """
 Future instruction:
-    - rename: rn
     - undo (advanced)
     - retrieve from completed tasks
         - add ids to completed tasks
@@ -24,7 +20,7 @@ class Main:
     def __init__(self, mobile = False, auto_start = True, task_filename = "tasks.csv", log_filename = "completed_tasks.csv"):
         dirname = os.path.dirname(__file__)
         self.task_filename = os.path.join(dirname, task_filename)
-        self.log_filename = os.path.join(dirname,log_filename)
+        self.log_filename = os.path.join(dirname, log_filename)
         self.q = TodoQueue()
         self.q.mobile = mobile
         self.auto_start = auto_start
@@ -40,10 +36,11 @@ class Main:
             "escalate": (self.escalate, "esc", "Escalates given task to next priority", ["[int]: Local id of task to escalate"]), 
             "deesclate": (self.deescalate, "desc", "De-escalates given task to previous priority", ["[int]: Local id of task to de-escalate"]),
 
-            # Attribut change
+            # Attribute change
             "change_name": (self.change_name, "cn", "Change name of given task.", ["[int]: Local id of task of which to change name", "[str]: Name to which to change"]),
             "change_category": (self.change_category, "cc", "Change category of given task.", ["[int]: Local id of task of which to change category", "[str]: Category to which to change"]),
             "change_description": (self.change_description, "cd", "Change description of given task.", ["[int]: Local id of task of which to change description", "[str]: Description to which to change"]),
+            "change_escalate_time": (self.change_escalate_time, "cet", "Change escalate time of given task.", ["[int]: Local id of task of which to change esclate time", "[int]: Days from today to set escalate time"]),
 
             # Display
             "print": (self.print_tasks, "p", "Print queue.", ["[Optional[int]]: Limit output tasks"]),
@@ -113,12 +110,31 @@ class Main:
 
     def change_description(self, args):
         if not (len(args) >= 2 and args[0].isnumeric() and int(args[0]) in self.q.ids):
-            print("Change description takes two multiple arguments and the first numeric argument must match the local id of an existing task.")
+            print("Change description takes multiple arguments and the first numeric argument must match the local id of an existing task.")
             return
 
         change_task = self.q.get_given_id(int(args[0]))
         change_task.set_description(" ".join(args[1:]))
         print(f"Description of '{change_task.name}' ({change_task.local_id}) set to '{change_task.description}'")
+
+    def change_escalate_time(self, args):
+        if not (len(args) == 2 and args[0].isnumeric() and int(args[0]) in self.q.ids and args[1].isnumeric()):
+            print("Change escalate takes two numerical arguments and the first numeric argument must match the local id of an existing task.")
+            return
+
+        change_task = self.q.get_given_id(int(args[0]))
+        days = int(args[1])
+        if change_task.priority == 0:
+            print("Task priority is already urgent, escalate time cannot be changed.")
+            return
+
+        if not(0 < days <= DAYS_TO_ESCALATE[change_task.priority]):
+            print(f"Task priority is {change_task.priority}, second argument must therefore be a positive integer leq to {DAYS_TO_ESCALATE[change_task.priority]}.")
+            return
+        
+        now = datetime.datetime.now()
+        change_task.set_escalate_time(datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(days = days))
+        print(f"Escalate time of '{change_task.name}' ({change_task.local_id}) set to '{change_task.calc_days_til_escalate()}'")
     
     def escalate(self, args):
 
@@ -341,17 +357,22 @@ class Main:
         self.logger.writerow(list(task.get_properties().values()) + [datetime.datetime.now().strftime(TIME_FORMAT)])
 
     def load(self):
-        # Check valid file
         with open(self.task_filename, 'r') as infile:
             task_reader = csv.reader(infile)
-            next(task_reader)
+            header = next(task_reader)
+            
+            name_i, time_created_i, priority_i, category_i, description_i, escalate_time_i =\
+                header.index("name"), header.index("time_created"), header.index("priority"), header.index("category"), header.index("description"), header.index("escalate_time")
+
             for row in task_reader:
                 new_task = Task(
-                    self.q.increment_counter(), 
-                    row[1], int(row[3]), row[4], 
-                    datetime.datetime.strptime(row[2], TIME_FORMAT),
-                    row[5],
-                    datetime.datetime.strptime(row[6], TIME_FORMAT) if row[6] else None,
+                    local_id = self.q.increment_counter(),
+                    name = row[name_i],
+                    priority = int(row[priority_i]),
+                    category = row[category_i],
+                    time_created = datetime.datetime.strptime(row[time_created_i], TIME_FORMAT),
+                    description = row[description_i],
+                    escalate_time = datetime.datetime.strptime(row[escalate_time_i], TIME_FORMAT) if row[escalate_time_i] else None,
                 )
                 self.q.put(new_task)
 

@@ -1,7 +1,7 @@
 import json
 import datetime
-from unicodedata import category
 from NicePrinter import table
+from typing import List, Dict
 
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 TASK_CATEGORY_ALIASES = {
@@ -33,25 +33,31 @@ class Task:
         self.prev = None
         self.next = None
 
-    def set_name(self, new_name):
+
+    #########
+    #SETTERS#
+    #########
+
+    def set_name(self, new_name: str) -> None:
         self.name = new_name
 
-    def set_category(self, new_category):
+    def set_category(self, new_category: str) -> None:
         self.category = new_category
 
-    def set_description(self, new_description):
+    def set_description(self, new_description: str) -> None:
         self.description = new_description
 
+    def set_escalate_time(self, new_escalate_time: datetime.datetime) -> None:
+        self.escalate_time = new_escalate_time
 
-    def calc_escalate_time(self, from_time: datetime.datetime) -> datetime.datetime:
-        
-        if self.priority == 0:
-            return None
-        
-        more_days = datetime.timedelta(days = DAYS_TO_ESCALATE[self.priority])
-        return datetime.datetime(from_time.year, from_time.month, from_time.day) + more_days
+    ############
+    #ESCALATION#
+    ############
 
-    def escalate(self, force = False):
+    def escalate(self, force: bool = False):
+        # Advances priority by 1 and recalculates escalate time
+        # (force = False), unforced escalates occur naturally and recalculates escalate time based on existing escalate time
+        # (force = True), force escalates occur when user requests an escalation and recalculates escalate time from now
 
         if self.priority == 0:
             return None
@@ -61,6 +67,9 @@ class Task:
         return self
 
     def deescalate(self):
+        # Downgrades priority by 1 and recalculates escalate time
+        # Occurs onlw when user requests a de-escalation
+
         if self.priority == 4:
             return None
         
@@ -69,17 +78,24 @@ class Task:
         return self
 
     def check_escalate(self):
+        # Checks that an escalation needs to happen and escalates
         while self.escalate_time and datetime.datetime.now() > self.escalate_time:
             self.escalate()
+    
+    def calc_escalate_time(self, from_time: datetime.datetime) -> datetime.datetime:
+        # Calculates a new escalation time relative to a give datetime
+        if self.priority == 0:
+            return None
+        
+        more_days = datetime.timedelta(days = DAYS_TO_ESCALATE[self.priority])
+        return datetime.datetime(from_time.year, from_time.month, from_time.day) + more_days
 
-    def update_priority(self, new_priority: int):
-        self.priority = new_priority
+    #########
+    #DISPLAY#
+    #########
 
-    def calc_days_til_escalate(self):
-        if self.escalate_time:
-            return (self.escalate_time - datetime.datetime.now()).days + 1
-
-    def get_basic_info(self):
+    def get_basic_info(self) -> List[str]:
+        # Returns an array of readable strings of the Task's properties
         info = self.get_properties()
         info["priority"] = f"P{info['priority']}"
         info["escalate_time"] = f"{self.calc_days_til_escalate()} days" if self.escalate_time else None
@@ -87,20 +103,25 @@ class Task:
             info[attr] = str(info[attr]) if info[attr] else ""
 
         return list(info.values())
-         
-    def __str__(self):
-        return json.dumps(self.get_properties())
 
-    def get_properties(self):
+    def calc_days_til_escalate(self) -> int:
+        # Returns a readable 'days until escalation' int
+        if self.escalate_time:
+            return (self.escalate_time - datetime.datetime.now()).days + 1
+         
+    def get_properties(self) -> Dict:
         return {
             "local_id": self.local_id,
             "name": self.name,
-            "time_created": self.time_created,
+            "time_created": self.time_created.strftime(TIME_FORMAT),
             "priority": self.priority,
             "category": self.category,
             "description": self.description,
-            "escalate_time": self.escalate_time
+            "escalate_time": self.escalate_time.strftime(TIME_FORMAT) if self.escalate_time else None,
         }
+
+    def __str__(self) -> str:
+        return json.dumps(self.get_properties())
 
     @staticmethod
     def get_readable_attribute_names():
@@ -109,6 +130,7 @@ class Task:
     def get_attribute_names():
         return [attribute.lower().replace(" ", "_") for attribute in Task.get_readable_attribute_names()]
 
+# For dummy header and tail nodes
 class EmptyNode:
     def __init__(self):
         self.next = None
