@@ -8,8 +8,9 @@ TASK_CATEGORY_ALIASES = {
     "a": "admin",
     "c": "cleaning",
     "hw": "homework",
-    "s": "shopping",
+    "lg": "life goals",
     "r": "routine",
+    "s": "shopping",
     "soc": "social",
 }
 DAYS_TO_ESCALATE = {
